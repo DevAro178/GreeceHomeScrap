@@ -57,6 +57,7 @@ function CurlCallToAPI($url)
     $CurlURL = "https://api.webscrapingapi.com/v1?url=";
     $CurlURL .= $encodedURL;
     $CurlURL .= "&api_key=X80HlWTDGksS0CRy3nCEYNFxufRaTWn0&device=desktop&proxy_type=datacenter&render_js=1&wait_until=domcontentloaded";
+
     curl_setopt_array($curl, array(
         CURLOPT_URL => $CurlURL,
         CURLOPT_RETURNTRANSFER => true,
@@ -158,38 +159,6 @@ function GetPaginationNumber($url)
 
 function GetProductDetails($Producturl)
 {
-
-
-
-    $curl = curl_init();
-    $encodedURL = urlencode($Producturl);
-    $CurlURL = "https://api.webscrapingapi.com/v1?url=";
-    $CurlURL .= $encodedURL;
-    $CurlURL .= "&api_key=X80HlWTDGksS0CRy3nCEYNFxufRaTWn0&device=desktop&proxy_type=datacenter&render_js=1&wait_until=domcontentloaded";
-
-    echo 'https://api.webscrapingapi.com/v1?url=https%3A%2F%2Fwww.indomio.gr%2Fen%2Faggelies%2F2229367%2F&api_key=X80HlWTDGksS0CRy3nCEYNFxufRaTWn0&device=desktop&proxy_type=datacenter&render_js=1&wait_until=domcontentloaded';
-
-    echo "<br><br>";
-
-    echo $encodedURL;
-    // exit();
-
-    curl_setopt_array($curl, array(
-        CURLOPT_URL => $CurlURL,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => '',
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => 'GET',
-    ));
-
-    $response = curl_exec($curl);
-
-    curl_close($curl);
-
-
     //declaring all the block scoped variables here
     $ProductDetails = array(); // Clearing the entire array
     $ProductDetails = array(
@@ -213,9 +182,7 @@ function GetProductDetails($Producturl)
     $EnergyEfficiency = array();
 
     //Using CurlCall method to get the response
-    // $response = CurlCallToAPI($Producturl);
-    print_r($response);
-    exit();
+    $response = CurlCallToAPI($Producturl);
     $html = new simple_html_dom();
     $html->load($response);
     // getting image links

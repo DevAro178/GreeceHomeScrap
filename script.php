@@ -9,5 +9,5 @@ include('./ScrapingFile.php');
 // // print_r($array);
 // // echo "</pre>";
 
-echo "<pre>";
+// echo "<pre>";
 print_r(GetProductDetails('https://www.indomio.gr/en/aggelies/569912/'));
