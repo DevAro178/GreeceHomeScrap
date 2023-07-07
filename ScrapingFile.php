@@ -1,6 +1,6 @@
 <?php
 
-include('./ProductDetailsClass.php');
+// include('./ProductDetailsClass.php');
 include('./simple_html_dom.php');
 
 $data = array();
@@ -14,7 +14,7 @@ function Main($url)
     // Calling the CurlCall function to get response data for the first page
     $response = CurlCallToAPI($url);
     // Storing resultant array in $data array
-    $data = ScrapingProducts($response);
+    $data = ScrapingProducts($response, 1);
     // Getting all keys of $data Array
     $keys = array_keys($data);
     // 
@@ -24,7 +24,7 @@ function Main($url)
         if (!is_array($data[$key])) {
             //Calling CurlCall Function to get the source code 
             $response = CurlCallToAPI($data[$key]);
-            $internalArray = ScrapingProducts($response);
+            $internalArray = ScrapingProducts($response, 5);
             $internalKeys = array_keys($internalArray);
             foreach ($internalKeys as $internalKey) {
                 if (!is_array($internalArray[$internalKey])) {
@@ -41,9 +41,13 @@ function Main($url)
             $data[$key] = $internalArray;
         }
     }
+    echo "<pre>";
     print_r($data);
+    echo "</pre>";
+    echo "<br>";
+
     $serializedData = serialize($data);
-    file_put_contents('data.txt', $serializedData);
+    file_put_contents('details.txt', $serializedData);
 }
 
 function CurlCallToAPI($url)
@@ -73,7 +77,7 @@ function CurlCallToAPI($url)
         return $response;
     }
 }
-function ScrapingProducts($response)
+function ScrapingProducts($response, $Num)
 {
     $i = 0;
     $internalArray = array();
@@ -84,7 +88,7 @@ function ScrapingProducts($response)
 
     $items = $html->find('.nd-listMeta__item');
     foreach ($items as $item) {
-        if ($i === 1) {
+        if ($i === $Num) {
             break;
         }
         $titletags = $item->find('.nd-listMeta__link');
@@ -100,7 +104,8 @@ function ScrapingProducts($response)
 function GetProducts($url)
 {
     $ProductArray = array();
-    $paginationNum = GetPaginationNumber($url);
+    // $paginationNum = GetPaginationNumber($url);
+    $paginationNum = 1;
     for ($u = 1; $u <= $paginationNum; $u++) {
         $PaginationUrl = $url . "?pag=" . $u;
         $response = CurlCallToAPI($PaginationUrl);
@@ -108,20 +113,27 @@ function GetProducts($url)
         $html->clear();
         $html->load($response);
         $products = $html->find('.nd-list__item.in-realEstateResults__item');
-        $i = 0;
-        foreach ($products as $product) {
-            if ($i === 1) {
-                break 1;
+        if (!empty($products) && !is_null($products)) {
+            $i = 0;
+            foreach ($products as $product) {
+                if ($i === 10) {
+                    break 1;
+                }
+
+
+
+                $links = $product->find('.in-card__title'); // Corrected selector
+                if (!empty($links) && !is_null($links)) {
+
+                    foreach ($links as $link) {
+                        // array_push($ProductArray, GetProductDetails($links->href));
+                        array_push($ProductArray, $link->href);
+                    }
+                }
+                $i++;
             }
-            $links = $product->find('.in-card__title'); // Corrected selector
-            foreach ($links as $link) {
-                // $ProductArray[] = GetProductDetails($link->href);
-                array_push($ProductArray, GetProductDetails($link->href));
-                // array_push($ProductArray, $link->href);
-            }
-            $i++;
+            break;
         }
-        break;
     }
     return $ProductArray;
 }
@@ -146,6 +158,38 @@ function GetPaginationNumber($url)
 
 function GetProductDetails($Producturl)
 {
+
+
+
+    $curl = curl_init();
+    $encodedURL = urlencode($Producturl);
+    $CurlURL = "https://api.webscrapingapi.com/v1?url=";
+    $CurlURL .= $encodedURL;
+    $CurlURL .= "&api_key=X80HlWTDGksS0CRy3nCEYNFxufRaTWn0&device=desktop&proxy_type=datacenter&render_js=1&wait_until=domcontentloaded";
+
+    echo 'https://api.webscrapingapi.com/v1?url=https%3A%2F%2Fwww.indomio.gr%2Fen%2Faggelies%2F2229367%2F&api_key=X80HlWTDGksS0CRy3nCEYNFxufRaTWn0&device=desktop&proxy_type=datacenter&render_js=1&wait_until=domcontentloaded';
+
+    echo "<br><br>";
+
+    echo $encodedURL;
+    // exit();
+
+    curl_setopt_array($curl, array(
+        CURLOPT_URL => $CurlURL,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 0,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'GET',
+    ));
+
+    $response = curl_exec($curl);
+
+    curl_close($curl);
+
+
     //declaring all the block scoped variables here
     $ProductDetails = array(); // Clearing the entire array
     $ProductDetails = array(
@@ -169,111 +213,146 @@ function GetProductDetails($Producturl)
     $EnergyEfficiency = array();
 
     //Using CurlCall method to get the response
-    $response = CurlCallToAPI($Producturl);
-    global $html;
-    $html->clear();
+    // $response = CurlCallToAPI($Producturl);
+    print_r($response);
+    exit();
+    $html = new simple_html_dom();
     $html->load($response);
     // getting image links
     $images = $html->find('.nd-slideshow__item');
-    foreach ($images as $internal) {
-        $img = $internal->find('img', 0);
-        if ($img) {
-            // $imagesArray[] = $img->src;
-            array_push($imagesArray, $img->src);
+    if (!empty($images)) {
+        foreach ($images as $internal) {
+            $img = $internal->find('img', 0);
+            if ($img) {
+                // $imagesArray[] = $img->src;
+                array_push($imagesArray, $img->src);
+            }
         }
+        $ProductDetails['imageLinks'] = $imagesArray;
     }
-    $ProductDetails['imageLinks'] = $imagesArray;
-
 
 
 
 
     // Getting Title
     $title = $html->find('.in-titleBlock__title');
-    foreach ($title as $internal) {
-        $ProductDetails['name'] = $internal->innertext;
+    if (!empty($title) && !is_null($title)) {
+        foreach ($title as $internal) {
+            $ProductDetails['name'] = $internal->innertext;
+        }
     }
 
 
     // Getting Address
     $location = $html->find('.in-titleBlock__link');
-    foreach ($location as $internal) {
-        $spans = $internal->find('span'); // Find all <span> tags within $internal
-        foreach ($spans as $span) {
-            // $AdressArray[] = $span->innertext;
-            array_push($AdressArray, $span->innertext);
+    if (!empty($location) && !is_null($location)) {
+        foreach ($location as $internal) {
+            $spans = $internal->find('span'); // Find all <span> tags within $internal
+            if (!empty($spans) && !is_null($spans)) {
+                foreach ($spans as $span) {
+                    // $AdressArray[] = $span->innertext;
+                    array_push($AdressArray, $span->innertext);
+                }
+                $ProductDetails['address'] = $AdressArray;
+            }
         }
-        $ProductDetails['address'] = $AdressArray;
     }
 
 
     // Getting Price
     $Price = $html->find('.in-detail__mainFeaturesPrice');
-    foreach ($Price as $internal) {
-        $ProductDetails['Price'] = $internal->innertext;
+    if (!empty($Price) && !is_null($Price)) {
+        foreach ($Price as $internal) {
+            $ProductDetails['Price'] = $internal->innertext;
+        }
     }
 
     // Getting Number of rooms
     $rooms = $html->find('[aria-label="rooms"]');
-    foreach ($rooms as $internal) {
-        $divs = $internal->find('.in-feat__data');
-        foreach ($divs as $div) {
-            if (!empty($div)) {
-                $innerText = $div->plaintext;
-                $ProductDetails['Rooms'] = $innerText;
+    if (!empty($rooms) && !is_null($rooms)) {
+        foreach ($rooms as $internal) {
+            $divs = $internal->find('.in-feat__data');
+            if (!empty($divs) && !is_null($divs)) {
+                foreach ($divs as $div) {
+                    if (!empty($div)) {
+                        $innerText = $div->plaintext;
+                        $ProductDetails['Rooms'] = $innerText;
+                    }
+                }
             }
         }
     }
 
     // Getting Number of surface
     $Surface = $html->find('[aria-label="surface"]');
-    foreach ($Surface as $internal) {
-        $divs = $internal->find('.in-feat__data');
-        foreach ($divs as $div) {
-            if (!empty($div)) {
-                $innerText = $div->plaintext;
-                $ProductDetails['Surface'] = $innerText;
+    if (!empty($Surface) && !is_null($Surface)) {
+
+        foreach ($Surface as $internal) {
+            $divs = $internal->find('.in-feat__data');
+            if (!empty($divs) && !is_null($divs)) {
+
+                foreach ($divs as $div) {
+                    if (!empty($div)) {
+                        $innerText = $div->plaintext;
+                        $ProductDetails['Surface'] = $innerText;
+                    }
+                }
             }
         }
     }
 
     // Getting Number of bathroom
     $bathroom = $html->find('[aria-label="bathroom"]');
-    foreach ($bathroom as $internal) {
-        $divs = $internal->find('.in-feat__data');
-        foreach ($divs as $div) {
-            if (!empty($div)) {
-                $innerText = $div->plaintext;
-                $ProductDetails['Bathroom'] = $innerText;
+    if (!empty($bathroom) && !is_null($bathroom)) {
+        foreach ($bathroom as $internal) {
+            $divs = $internal->find('.in-feat__data');
+            if (!empty($divs) && !is_null($divs)) {
+
+                foreach ($divs as $div) {
+                    if (!empty($div)) {
+                        $innerText = $div->plaintext;
+                        $ProductDetails['Bathroom'] = $innerText;
+                    }
+                }
             }
         }
     }
 
     // Getting Number of floor
     $floor = $html->find('[aria-label="floor"]');
-    foreach ($floor as $internal) {
-        $divs = $internal->find('.in-feat__data');
-        foreach ($divs as $div) {
-            if (!empty($div)) {
-                $innerText = $div->plaintext;
-                $ProductDetails['floor'] = $innerText;
+    if (!empty($floor) && !is_null($floor)) {
+
+        foreach ($floor as $internal) {
+            $divs = $internal->find('.in-feat__data');
+            if (!empty($divs) && !is_null($divs)) {
+
+                foreach ($divs as $div) {
+                    if (!empty($div)) {
+                        $innerText = $div->plaintext;
+                        $ProductDetails['floor'] = $innerText;
+                    }
+                }
             }
         }
     }
     // Getting Description
     $Description = $html->find('.in-readAll.in-readAll--lessContent');
-    foreach ($Description as $internal) {
-        $divs = $internal->find('div');
-        foreach ($divs as $div) {
-            if (!empty($div)) {
-                $innerText = $div->outertext;
-                $ProductDetails['description'] = $innerText;
+    if (!empty($Description) && !is_null($Description)) {
+        foreach ($Description as $internal) {
+            $divs = $internal->find('div');
+            if (!empty($divs) && !is_null($divs)) {
+                foreach ($divs as $div) {
+                    if (!empty($div)) {
+                        $innerText = $div->outertext;
+                        $ProductDetails['description'] = $innerText;
+                    }
+                }
             }
         }
     }
 
     $table = $html->find('.in-realEstateFeatures__list', 0); // Assuming you have selected the <dl> element using find() method
-    if ($table) {
+    if (!empty($table) && !is_null($table)) {
         $dtTags = $table->find('dt');
         $ddTags = $table->find('dd');
 
@@ -285,9 +364,12 @@ function GetProductDetails($Producturl)
             if ($key === 'other features') {
                 $spanTags = $ddTags[$i]->find('span');
                 $spanArray = array();
-                foreach ($spanTags as $span) {
-                    // $spanArray[] = $span->plaintext;
-                    array_push($spanArray, $span->plaintext);
+                if (!empty($spanTags) && !is_null($spanTags)) {
+
+                    foreach ($spanTags as $span) {
+                        // $spanArray[] = $span->plaintext;
+                        array_push($spanArray, $span->plaintext);
+                    }
                 }
                 $value = $spanArray;
             }
@@ -298,7 +380,8 @@ function GetProductDetails($Producturl)
     }
 
     $table = $html->find('.in-realEstateFeatures__list', 1); // Assuming you have selected the <dl> element using find() method
-    if ($table) {
+    if (!empty($table) && !is_null($table)) {
+
         $dtTags = $table->find('dt');
         $ddTags = $table->find('dd');
 
@@ -313,7 +396,8 @@ function GetProductDetails($Producturl)
     }
 
     $table = $html->find('.in-realEstateFeatures__list', 2); // Assuming you have selected the <dl> element using find() method
-    if ($table) {
+    if (!empty($table) && !is_null($table)) {
+
         $dtTags = $table->find('dt');
         $ddTags = $table->find('dd');
 
